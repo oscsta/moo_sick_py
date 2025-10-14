@@ -1,4 +1,5 @@
 import discord
+import logging
 import dotenv
 
 class MooSick(discord.Bot):
@@ -6,7 +7,5 @@ class MooSick(discord.Bot):
         super().__init__(*args, **kwargs)
 
     async def on_ready(self):
-        print('Logged in as')
-        print(self.user.name)
-        print(self.user.id)
-        print('------')
+        logging.info("Logged in as: %s (ID: %d)", self.user.name, self.user.id)
+        logging.info("------")
