@@ -1,2 +1,10 @@
-[tool.pyright]
-typeCheckingMode = "basic"
+[project]
+name = "py"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">3.12, <3.13"
+dependencies = [
+    "py-cord[voice]>=2.6.1",
+    "python-dotenv>=1.2.1",
+]
