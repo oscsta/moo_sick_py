@@ -17,14 +17,14 @@ def main():
         assert bot.user is not None, "bot.user was None"
 
         logging.info("Logged in as: %s (ID: %d)", bot.user.name, bot.user.id)
-        logging.info("------")
 
-    @bot.command()
-    async def play(ctx: discord.ApplicationContext):
-        await ctx.respond(f"Pong! Latency is {bot.latency}")
+    @bot.slash_command()
+    @discord.option("search", input_type=str)
+    async def music(ctx: discord.ApplicationContext, search: str):
+        await ctx.respond(f"Pong! Latency is {bot.latency} and search term is {search}")
 
 
-    bot.run(os.getenv("DISCORD_API_KEY"))
+    bot.run(os.getenv("DISCORD_BOT_TOKEN"))
 
 if __name__ == "__main__":
     main()
