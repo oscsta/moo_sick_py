@@ -28,7 +28,7 @@ def youtube_api_search_with(base: str = "https://www.googleapis.com/youtube/v3/s
     result = requests.get(base, params=search_args)
     return result
 
-def youtube_api_get_videos(ids: list[str], base: str = "https://www.googleapis.com/youtube/v3/videos", **search_args):
+def youtube_api_get_video_info(ids: list[str], base: str = "https://www.googleapis.com/youtube/v3/videos", **search_args):
     search_args["id"] = ','.join(ids)
     logger.info("Sending GET request to Youtube API /videos endpoint with: %s", strip_yt_api_key_from_dict(search_args))
     search_args["key"] = os.getenv("YT_API_KEY")
@@ -37,7 +37,7 @@ def youtube_api_get_videos(ids: list[str], base: str = "https://www.googleapis.c
 
 def build_embed(video_ids: list[str]):
     logger.info("Building song choice embed...")
-    video_info_list = youtube_api_get_videos(video_ids, part="snippet,contentDetails", regionCode="SE")
+    video_info_list = youtube_api_get_video_info(video_ids, part="snippet,contentDetails", regionCode="SE")
     embed = discord.Embed(title="Choose song", color=discord.Color.blue())
     for i, video_info in enumerate(video_info_list["items"]):
         duration = isodate.parse_duration(video_info["contentDetails"]["duration"])
@@ -73,6 +73,7 @@ class MusicPlayerCog(discord.Cog):
     def __init__(self, bot):
         super().__init__()
         self.bot = bot
+        self.queue = []
 
     @discord.slash_command()
     @discord.option("search", input_type=str)
@@ -109,13 +110,43 @@ class MusicPlayerCog(discord.Cog):
 
         selected_index = int(message.content) - 1
         selected_video = video_ids[selected_index]
-        download_audio_from(selected_video)
+        self.queue.append(selected_video)
+
+        if ctx.voice_client is None:
+            if invoker_voice := ctx.author.voice:
+                await invoker_voice.channel.connect()
+            else:
+                await ctx.send("You are not connected to a voice channel.")
+
+        if not ctx.voice_client.is_playing():
+            download_audio_from(selected_video)
+            ctx.voice_client.play(
+                discord.FFmpegOpusAudio("audio.opus"),
+                after=lambda e: print(f"Player error: {e}") if e else None
+            )
+
+
+        
+
+
+
+    @discord.Cog.listener()
+    async def on_voice_state_update(self, member, before, after):
+        voice_client = member.guild.voice_client
+        if voice_client and before.channel == voice_client.channel and after.channel != voice_client.channel:
+            human_members = [m for m in voice_client.channel.members if not m.bot]
+            if len(human_members) == 0:
+                await voice_client.disconnect()
+                # TODO: Cleanup logic for music player
+
+
 
 def _main():
     dotenv.load_dotenv()
 
-    intents = discord.Intents.default()
+    intents = discord.Intents.all()
     intents.message_content = True
+    intents.voice_states = True
     bot = discord.Bot(intents=intents)
     bot.add_cog(MusicPlayerCog(bot))
 
