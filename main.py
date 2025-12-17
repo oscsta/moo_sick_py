@@ -70,7 +70,7 @@ def download_audio_from(video_id: str):
     logger.info("Audio download complete")
 
 class MusicPlayerCog(discord.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: discord.Bot):
         super().__init__()
         self.bot = bot
         self.queue = []
@@ -119,25 +119,37 @@ class MusicPlayerCog(discord.Cog):
                 await ctx.send("You are not connected to a voice channel.")
 
         if not ctx.voice_client.is_playing():
-            download_audio_from(selected_video)
-            ctx.voice_client.play(
-                discord.FFmpegOpusAudio("audio.opus"),
-                after=lambda e: print(f"Player error: {e}") if e else None
-            )
+            await self.play_next(ctx)
 
 
         
-
-
-
     @discord.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
         voice_client = member.guild.voice_client
         if voice_client and before.channel == voice_client.channel and after.channel != voice_client.channel:
             human_members = [m for m in voice_client.channel.members if not m.bot]
             if len(human_members) == 0:
+                self.music_cog_cleanup()
                 await voice_client.disconnect()
                 # TODO: Cleanup logic for music player
+
+    def on_audio_finish(self, error, ctx: discord.ApplicationContext):
+        self.bot.loop.create_task(self.play_next(ctx))
+
+    async def play_next(self, ctx: discord.ApplicationContext):
+        if not self.queue:
+            return
+        video_id = self.queue.pop(0)
+        if ctx.voice_client is None or ctx.voice_client.is_playing():
+            return
+        download_audio_from(video_id)
+        ctx.voice_client.play(
+            discord.FFmpegOpusAudio("audio.opus"),
+            after=lambda error: self.on_audio_finish(error, ctx),
+        )
+
+    def music_cog_cleanup(self):
+        self.queue.clear()
 
 
 
