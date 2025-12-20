@@ -75,7 +75,7 @@ class MusicPlayerCog(discord.Cog):
         self.bot = bot
         self.queue = []
 
-    @discord.slash_command()
+    @discord.slash_command(guild_ids=[123475953098686464])
     @discord.option("search", input_type=str)
     async def music(self: Self, ctx: discord.ApplicationContext, search: str):
         logger.info("Latency to command entrypoint is %f", self.bot.latency)
@@ -151,6 +151,13 @@ class MusicPlayerCog(discord.Cog):
     def music_cog_cleanup(self):
         self.queue.clear()
 
+    @discord.slash_command(guild_ids=[123475953098686464])
+    async def skip(self: Self, ctx: discord.ApplicationContext):
+        if not ctx.voice_client:
+            return
+        logger.info("Skipping current playback with voice_client.stop()")
+        ctx.voice_client.stop()
+        await ctx.respond("Skipped current playback.")
 
 
 def _main():
@@ -166,44 +173,6 @@ def _main():
     async def on_ready():
         assert bot.user is not None, "bot.user was None"
         logger.info("Logged in as: %s (ID: %d)", bot.user.name, bot.user.id)
-
-    # @bot.slash_command()
-    # @discord.option("search", input_type=str)
-    # async def music(ctx: discord.ApplicationContext, search: str):
-    #     logger.info("Latency to command entrypoint is %f", bot.latency)
-    #     response = youtube_api_search_with(part="snippet", maxResults=5, regionCode="SE", safeSearch="none", type="video", q=search)
-    #     videos = response.json().get("items")
-    #     video_ids = [video["id"]["videoId"] for video in videos]
-    #     embed = build_embed(video_ids)
-    #     await ctx.respond(embed=embed)
-
-    #     def wait_for_valid_user_select(message: discord.Message):
-    #         print(message.content)
-    #         if message.author != ctx.author:
-    #             return False
-    #         try:
-    #             selection = int(message.content)
-    #         except ValueError:
-    #             logger.info("Could not convert message content into integer.")
-    #             return False
-    #         valid_range = (1, len(video_ids))
-    #         if not valid_range[0] <= selection <= valid_range[1]:
-    #             logger.info("Selection is not within allowed range of numeric choices")
-    #             return False
-    #         return True
-        
-    #     try:
-    #         message = await bot.wait_for("message", check=wait_for_valid_user_select, timeout=60.0)
-    #         logger.info("Valid user selection {%s} encountered.", message.content)
-    #     except asyncio.TimeoutError:
-    #         logger.info("Music playback request has timed out.")
-    #         await ctx.respond("Request timed out.")
-    #         return
-
-    #     selected_index = int(message.content) - 1
-    #     selected_video = video_ids[selected_index]
-    #     download_audio_from(selected_video)
-
 
     bot.run(os.getenv("DISCORD_BOT_TOKEN"))
 
